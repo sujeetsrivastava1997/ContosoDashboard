@@ -1,0 +1,281 @@
+@page "/documents"
+@using ContosoDashboard.Models
+@using ContosoDashboard.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Security.Claims
+@attribute [Authorize]
+@inject IDocumentService DocumentService
+@inject IProjectService ProjectService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Documents - ContosoDashboard</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Documents</h1>
+            <p class="text-muted">Upload, organize, and review your project and personal documents.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Upload a document</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrWhiteSpace(statusMessage))
+                    {
+                        <div class="alert @(isError ? "alert-danger" : "alert-success")" role="alert">
+                            @statusMessage
+                        </div>
+                    }
+
+                    <EditForm Model="uploadModel" OnValidSubmit="HandleUpload">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <InputText class="form-control" @bind-Value="uploadModel.Title" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <InputTextArea class="form-control" @bind-Value="uploadModel.Description" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <InputSelect class="form-select" @bind-Value="uploadModel.Category">
+                                <option value="Project Documents">Project Documents</option>
+                                <option value="Team Resources">Team Resources</option>
+                                <option value="Personal Files">Personal Files</option>
+                                <option value="Reports">Reports</option>
+                                <option value="Presentations">Presentations</option>
+                                <option value="Other">Other</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Project</label>
+                            <InputSelect class="form-select" @bind-Value="uploadModel.ProjectId">
+                                <option value="">-- Personal document --</option>
+                                @foreach (var project in projects)
+                                {
+                                    <option value="@project.ProjectId">@project.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">File</label>
+                            <InputFile class="form-control" OnChange="HandleFileSelected" />
+                            @if (selectedFile != null)
+                            {
+                                <small class="text-muted">Selected: @selectedFile.Name</small>
+                            }
+                        </div>
+
+                        <button class="btn btn-primary" type="submit" disabled="@(selectedFile == null || isSubmitting)">
+                            @(isSubmitting ? "Uploading..." : "Upload document")
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Your documents</h5>
+                </div>
+                <div class="card-body">
+                    @if (documents == null || !documents.Any())
+                    {
+                        <p class="text-muted mb-0">No documents uploaded yet.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Category</th>
+                                        <th>Project</th>
+                                        <th>Uploaded</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var document in documents)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@document.Title</strong>
+                                                @if (!string.IsNullOrWhiteSpace(document.Description))
+                                                {
+                                                    <br />
+                                                    <small class="text-muted">@document.Description</small>
+                                                }
+                                            </td>
+                                            <td><span class="badge bg-secondary">@document.Category</span></td>
+                                            <td>@(document.ProjectId.HasValue ? document.Project?.Name ?? "Project" : "Personal")</td>
+                                            <td>@document.CreatedDate.ToString("MMM dd, yyyy")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly UploadDocumentModel uploadModel = new();
+    private List<Project> projects = new();
+    private List<Document> documents = new();
+    private IBrowserFile? selectedFile;
+    private int currentUserId;
+    private bool isSubmitting;
+    private bool isError;
+    private string statusMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+        {
+            currentUserId = userId;
+        }
+
+        if (currentUserId > 0)
+        {
+            projects = await ProjectService.GetUserProjectsAsync(currentUserId);
+            await LoadDocumentsAsync();
+        }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        statusMessage = string.Empty;
+    }
+
+    private async Task HandleUpload()
+    {
+        if (selectedFile == null)
+        {
+            isError = true;
+            statusMessage = "Please choose a file to upload.";
+            return;
+        }
+
+        isSubmitting = true;
+        isError = false;
+        statusMessage = string.Empty;
+
+        try
+        {
+            var request = new DocumentUploadRequest
+            {
+                Title = uploadModel.Title,
+                Description = uploadModel.Description,
+                Category = uploadModel.Category,
+                ProjectId = string.IsNullOrWhiteSpace(uploadModel.ProjectIdText) ? null : int.Parse(uploadModel.ProjectIdText),
+                File = new BrowserFormFile(selectedFile)
+            };
+
+            await DocumentService.UploadAsync(request, currentUserId);
+
+            uploadModel.Title = string.Empty;
+            uploadModel.Description = string.Empty;
+            uploadModel.Category = "Project Documents";
+            uploadModel.ProjectIdText = string.Empty;
+            selectedFile = null;
+
+            statusMessage = "Document uploaded successfully.";
+            await LoadDocumentsAsync();
+        }
+        catch (Exception ex)
+        {
+            isError = true;
+            statusMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task LoadDocumentsAsync()
+    {
+        documents = await DocumentService.GetUserDocumentsAsync(currentUserId);
+    }
+
+    private class UploadDocumentModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Category { get; set; } = "Project Documents";
+        public string ProjectIdText { get; set; } = string.Empty;
+    }
+
+    private sealed class BrowserFormFile : IFormFile
+    {
+        private readonly IBrowserFile _browserFile;
+        private readonly MemoryStream? _memoryStream;
+
+        public BrowserFormFile(IBrowserFile browserFile)
+        {
+            _browserFile = browserFile;
+            _memoryStream = new MemoryStream();
+            using var stream = _browserFile.OpenReadStream(maxAllowedSize: 25 * 1024 * 1024);
+            stream.CopyTo(_memoryStream);
+            _memoryStream.Position = 0;
+        }
+
+        public string ContentType => _browserFile.ContentType;
+        public string ContentDisposition => $"inline; filename=\"{_browserFile.Name}\"";
+        public IHeaderDictionary Headers => new HeaderDictionary();
+        public long Length => _browserFile.Size;
+        public string Name => "file";
+        public string FileName => _browserFile.Name;
+
+        public void CopyTo(Stream target)
+        {
+            _memoryStream ?? throw new InvalidOperationException();
+            _memoryStream.Position = 0;
+            _memoryStream.CopyTo(target);
+        }
+
+        public async Task CopyToAsync(Stream target, CancellationToken cancellationToken = default)
+        {
+            _memoryStream ?? throw new InvalidOperationException();
+            _memoryStream.Position = 0;
+            await _memoryStream.CopyToAsync(target, cancellationToken);
+        }
+
+        public Stream OpenReadStream() => (_memoryStream ?? new MemoryStream()).CopyStream();
+    }
+}
+
+@code {
+    public static class StreamExtensions
+    {
+        public static Stream CopyStream(this MemoryStream source)
+        {
+            var copy = new MemoryStream();
+            source.Position = 0;
+            source.CopyTo(copy);
+            copy.Position = 0;
+            return copy;
+        }
+    }
+}
