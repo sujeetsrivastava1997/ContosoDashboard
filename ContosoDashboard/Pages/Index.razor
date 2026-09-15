@@ -5,6 +5,7 @@
 @attribute [Authorize]
 @inject IDashboardService DashboardService
 @inject INotificationService NotificationService
+@inject IDocumentService DocumentService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Dashboard - ContosoDashboard</PageTitle>
@@ -25,6 +26,14 @@
                     <div class="card-body">
                         <h5 class="card-title">Active Tasks</h5>
                         <p class="card-text display-4">@summary.TotalActiveTasks</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h5 class="card-title">My Documents</h5>
+                        <p class="card-text display-4 text-success">@recentDocuments.Count</p>
                     </div>
                 </div>
             </div>
@@ -77,6 +86,28 @@
     }
 
     <div class="row">
+        <div class="col-md-6 mb-4">
+            <h3>Recent Documents</h3>
+            @if (recentDocuments.Any())
+            {
+                <div class="list-group">
+                    @foreach (var document in recentDocuments.Take(5))
+                    {
+                        <a class="list-group-item list-group-item-action" href="/documents">
+                            <div class="d-flex w-100 justify-content-between">
+                                <strong>@document.Title</strong>
+                                <small>@GetRelativeTime(document.CreatedDate)</small>
+                            </div>
+                            <small class="text-muted">@document.Category · @document.ScanStatus</small>
+                        </a>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted">No recent documents</p>
+            }
+        </div>
         <div class="col-md-6">
             <h3>Quick Actions</h3>
             <div class="list-group">
@@ -124,6 +155,7 @@
     private DashboardSummary? summary;
     private List<Announcement>? announcements;
     private List<Notification>? recentNotifications;
+    private List<Document> recentDocuments = new();
     private string userName = "User";
     private int currentUserId = 0;
 
@@ -146,6 +178,7 @@
             summary = await DashboardService.GetDashboardSummaryAsync(currentUserId);
             announcements = await DashboardService.GetActiveAnnouncementsAsync();
             recentNotifications = await NotificationService.GetUserNotificationsAsync(currentUserId);
+            recentDocuments = await DocumentService.GetUserDocumentsAsync(currentUserId);
         }
     }
 

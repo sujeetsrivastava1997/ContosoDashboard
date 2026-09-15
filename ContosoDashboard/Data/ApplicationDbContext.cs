@@ -77,6 +77,9 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<DocumentShare>()
             .HasIndex(ds => ds.UserId);
 
+        modelBuilder.Entity<Document>()
+            .HasIndex(d => d.ScanStatus);
+
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
             .IsUnique();

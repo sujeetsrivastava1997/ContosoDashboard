@@ -21,15 +21,17 @@ public class DocumentService : IDocumentService
 {
     private readonly ApplicationDbContext _context;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IScanQueue _scanQueue;
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".png", ".jpg", ".jpeg"
     };
 
-    public DocumentService(ApplicationDbContext context, IFileStorageService fileStorageService)
+    public DocumentService(ApplicationDbContext context, IFileStorageService fileStorageService, IScanQueue? scanQueue = null)
     {
         _context = context;
         _fileStorageService = fileStorageService;
+        _scanQueue = scanQueue ?? new DiscardingScanQueue();
     }
 
     public async Task<Document> UploadAsync(DocumentUploadRequest request, int requestingUserId)
@@ -67,12 +69,14 @@ public class DocumentService : IDocumentService
 
         var storedFileName = $"{Guid.NewGuid():N}{fileExtension}";
         var storagePath = await _fileStorageService.UploadAsync(request.File.OpenReadStream(), storedFileName, request.File.ContentType);
+        var uploadAttemptId = Guid.NewGuid().ToString("N");
 
         var document = new Document
         {
             Title = request.Title.Trim(),
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
             Category = string.IsNullOrWhiteSpace(request.Category) ? "Other" : request.Category.Trim(),
+            Tags = NormalizeTags(request.Tags),
             FileName = request.File.FileName,
             StoredFileName = storedFileName,
             FilePath = storagePath,
@@ -84,8 +88,30 @@ public class DocumentService : IDocumentService
             UpdatedDate = DateTime.UtcNow
         };
 
-        _context.Documents.Add(document);
-        await _context.SaveChangesAsync();
+        document.ScanAttemptId = uploadAttemptId;
+        document.ScanStatus = DocumentScanStatus.PendingScan;
+
+        try
+        {
+            _context.Documents.Add(document);
+            await _context.SaveChangesAsync();
+            await _scanQueue.EnqueueAsync(new DocumentScanMessage
+            {
+                DocumentId = document.DocumentId,
+                StoragePath = document.FilePath,
+                MimeType = document.MimeType,
+                FileSizeBytes = document.FileSizeBytes,
+                UploadAttemptId = uploadAttemptId
+            });
+        }
+        catch
+        {
+            _context.Documents.Remove(document);
+            await _context.SaveChangesAsync();
+            _context.Entry(document).State = EntityState.Detached;
+            await _fileStorageService.DeleteAsync(storagePath);
+            throw;
+        }
 
         return document;
     }
@@ -94,6 +120,7 @@ public class DocumentService : IDocumentService
     {
         return await _context.Documents
             .Where(d => d.UploadedByUserId == requestingUserId && !d.IsDeleted)
+            .Include(d => d.Project)
             .OrderByDescending(d => d.CreatedDate)
             .ToListAsync();
     }
@@ -115,6 +142,7 @@ public class DocumentService : IDocumentService
 
         return await _context.Documents
             .Where(d => d.ProjectId == projectId && !d.IsDeleted)
+            .Include(d => d.Project)
             .OrderByDescending(d => d.CreatedDate)
             .ToListAsync();
     }
@@ -124,7 +152,7 @@ public class DocumentService : IDocumentService
         var document = await _context.Documents
             .Include(d => d.Project)
             .ThenInclude(p => p!.ProjectMembers)
-            .FirstOrDefaultAsync(d => d.DocumentId == documentId && !d.IsDeleted);
+            .FirstOrDefaultAsync(d => d.DocumentId == documentId && !d.IsDeleted && d.ScanStatus == DocumentScanStatus.Available);
 
         if (document == null)
             return null;
@@ -133,8 +161,9 @@ public class DocumentService : IDocumentService
         var isProjectManager = document.Project != null && document.Project.ProjectManagerId == requestingUserId;
         var isProjectMember = document.Project != null && document.Project.ProjectMembers.Any(pm => pm.UserId == requestingUserId);
         var hasExplicitShare = await _context.DocumentShares.AnyAsync(ds => ds.DocumentId == documentId && ds.UserId == requestingUserId);
+        var isAdministrator = await _context.Users.AnyAsync(u => u.UserId == requestingUserId && u.Role == UserRole.Administrator);
 
-        if (!ownsDocument && !isProjectManager && !isProjectMember && !hasExplicitShare)
+        if (!ownsDocument && !isProjectManager && !isProjectMember && !hasExplicitShare && !isAdministrator)
             return null;
 
         return document;
@@ -159,6 +188,9 @@ public class DocumentService : IDocumentService
 
         if (!string.IsNullOrWhiteSpace(request.Category))
             document.Category = request.Category.Trim();
+
+        if (request.Tags != null)
+            document.Tags = NormalizeTags(request.Tags);
 
         if (request.ProjectId.HasValue)
             document.ProjectId = request.ProjectId.Value;
@@ -250,10 +282,25 @@ public class DocumentService : IDocumentService
             .Where(d => d.Title.Contains(normalizedQuery) ||
                         (d.Description != null && d.Description.Contains(normalizedQuery)) ||
                         d.Category.Contains(normalizedQuery) ||
+                        (d.Tags != null && d.Tags.Contains(normalizedQuery)) ||
                         d.FileName.Contains(normalizedQuery))
             .OrderByDescending(d => d.CreatedDate)
             .Take(50)
             .ToListAsync();
+    }
+
+    private static string? NormalizeTags(string? tags)
+    {
+        if (string.IsNullOrWhiteSpace(tags))
+            return null;
+
+        var normalized = tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(tag => tag.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(25)
+            .ToArray();
+
+        return normalized.Length == 0 ? null : string.Join(", ", normalized);
     }
 }
 
@@ -262,6 +309,7 @@ public class DocumentUploadRequest
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string Category { get; set; } = "Other";
+    public string? Tags { get; set; }
     public int? ProjectId { get; set; }
     public IFormFile File { get; set; } = null!;
 }
@@ -271,5 +319,12 @@ public class DocumentUpdateRequest
     public string? Title { get; set; }
     public string? Description { get; set; }
     public string? Category { get; set; }
+    public string? Tags { get; set; }
     public int? ProjectId { get; set; }
+}
+
+internal sealed class DiscardingScanQueue : IScanQueue
+{
+    public ValueTask EnqueueAsync(ContosoDashboard.Models.DocumentScanMessage message, CancellationToken cancellationToken = default)
+        => ValueTask.CompletedTask;
 }

@@ -19,6 +19,9 @@ public class Document
     [MaxLength(100)]
     public string Category { get; set; } = "Other";
 
+    [MaxLength(1000)]
+    public string? Tags { get; set; }
+
     [Required]
     [MaxLength(255)]
     public string FileName { get; set; } = string.Empty;
@@ -43,6 +46,14 @@ public class Document
 
     public bool IsDeleted { get; set; } = false;
 
+    public DocumentScanStatus ScanStatus { get; set; } = DocumentScanStatus.PendingScan;
+
+    [MaxLength(64)]
+    public string ScanAttemptId { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? ScanResult { get; set; }
+
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
@@ -54,4 +65,12 @@ public class Document
     public virtual Project? Project { get; set; }
 
     public virtual ICollection<DocumentShare> Shares { get; set; } = new List<DocumentShare>();
+}
+
+public enum DocumentScanStatus
+{
+    PendingScan,
+    Available,
+    Rejected,
+    ScanFailed
 }

@@ -60,6 +60,11 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label">Tags</label>
+                            <InputText class="form-control" @bind-Value="uploadModel.Tags" placeholder="design, report, planning" />
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label">Project</label>
                             <InputSelect class="form-select" @bind-Value="uploadModel.ProjectId">
                                 <option value="">-- Personal document --</option>
@@ -106,7 +111,9 @@
                                         <th>Title</th>
                                         <th>Category</th>
                                         <th>Project</th>
+                                        <th>Status</th>
                                         <th>Uploaded</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -123,7 +130,14 @@
                                             </td>
                                             <td><span class="badge bg-secondary">@document.Category</span></td>
                                             <td>@(document.ProjectId.HasValue ? document.Project?.Name ?? "Project" : "Personal")</td>
+                                            <td><span class="badge bg-@GetScanStatusColor(document.ScanStatus)">@document.ScanStatus</span></td>
                                             <td>@document.CreatedDate.ToString("MMM dd, yyyy")</td>
+                                            <td>
+                                                @if (document.ScanStatus == DocumentScanStatus.Available)
+                                                {
+                                                    <a class="btn btn-sm btn-outline-secondary" href="/documents/@document.DocumentId/file?preview=true" target="_blank">Open</a>
+                                                }
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
@@ -162,10 +176,11 @@
         }
     }
 
-    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    private Task HandleFileSelected(InputFileChangeEventArgs e)
     {
         selectedFile = e.File;
         statusMessage = string.Empty;
+        return Task.CompletedTask;
     }
 
     private async Task HandleUpload()
@@ -188,8 +203,9 @@
                 Title = uploadModel.Title,
                 Description = uploadModel.Description,
                 Category = uploadModel.Category,
-                ProjectId = string.IsNullOrWhiteSpace(uploadModel.ProjectIdText) ? null : int.Parse(uploadModel.ProjectIdText),
-                File = new BrowserFormFile(selectedFile)
+                Tags = uploadModel.Tags,
+                ProjectId = uploadModel.ProjectId,
+                File = await BrowserFormFile.CreateAsync(selectedFile)
             };
 
             await DocumentService.UploadAsync(request, currentUserId);
@@ -197,7 +213,7 @@
             uploadModel.Title = string.Empty;
             uploadModel.Description = string.Empty;
             uploadModel.Category = "Project Documents";
-            uploadModel.ProjectIdText = string.Empty;
+            uploadModel.ProjectId = null;
             selectedFile = null;
 
             statusMessage = "Document uploaded successfully.";
@@ -224,58 +240,59 @@
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Category { get; set; } = "Project Documents";
-        public string ProjectIdText { get; set; } = string.Empty;
+        public string Tags { get; set; } = string.Empty;
+        public int? ProjectId { get; set; }
     }
 
     private sealed class BrowserFormFile : IFormFile
     {
-        private readonly IBrowserFile _browserFile;
-        private readonly MemoryStream? _memoryStream;
+        private readonly byte[] _content;
+        private readonly string _fileName;
+        private readonly string _contentType;
+        private readonly long _length;
 
-        public BrowserFormFile(IBrowserFile browserFile)
+        private BrowserFormFile(string fileName, string contentType, long length, byte[] content)
         {
-            _browserFile = browserFile;
-            _memoryStream = new MemoryStream();
-            using var stream = _browserFile.OpenReadStream(maxAllowedSize: 25 * 1024 * 1024);
-            stream.CopyTo(_memoryStream);
-            _memoryStream.Position = 0;
+            _fileName = fileName;
+            _contentType = contentType;
+            _length = length;
+            _content = content;
         }
 
-        public string ContentType => _browserFile.ContentType;
-        public string ContentDisposition => $"inline; filename=\"{_browserFile.Name}\"";
+        public static async Task<BrowserFormFile> CreateAsync(IBrowserFile browserFile)
+        {
+            await using var stream = browserFile.OpenReadStream(maxAllowedSize: 25 * 1024 * 1024);
+            using var content = new MemoryStream();
+            await stream.CopyToAsync(content);
+            return new BrowserFormFile(browserFile.Name, browserFile.ContentType, browserFile.Size, content.ToArray());
+        }
+
+        public string ContentType => _contentType;
+        public string ContentDisposition => $"inline; filename=\"{_fileName}\"";
         public IHeaderDictionary Headers => new HeaderDictionary();
-        public long Length => _browserFile.Size;
+        public long Length => _length;
         public string Name => "file";
-        public string FileName => _browserFile.Name;
+        public string FileName => _fileName;
 
         public void CopyTo(Stream target)
         {
-            _memoryStream ?? throw new InvalidOperationException();
-            _memoryStream.Position = 0;
-            _memoryStream.CopyTo(target);
+            target.Write(_content, 0, _content.Length);
         }
 
         public async Task CopyToAsync(Stream target, CancellationToken cancellationToken = default)
         {
-            _memoryStream ?? throw new InvalidOperationException();
-            _memoryStream.Position = 0;
-            await _memoryStream.CopyToAsync(target, cancellationToken);
+            await target.WriteAsync(_content.AsMemory(), cancellationToken);
         }
 
-        public Stream OpenReadStream() => (_memoryStream ?? new MemoryStream()).CopyStream();
+        public Stream OpenReadStream() => new MemoryStream(_content, writable: false);
     }
-}
 
-@code {
-    public static class StreamExtensions
-    {
-        public static Stream CopyStream(this MemoryStream source)
+    private static string GetScanStatusColor(DocumentScanStatus status)
+        => status switch
         {
-            var copy = new MemoryStream();
-            source.Position = 0;
-            source.CopyTo(copy);
-            copy.Position = 0;
-            return copy;
-        }
-    }
+            DocumentScanStatus.Available => "success",
+            DocumentScanStatus.Rejected => "danger",
+            DocumentScanStatus.ScanFailed => "danger",
+            _ => "warning"
+        };
 }
