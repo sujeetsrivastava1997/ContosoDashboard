@@ -1,4 +1,5 @@
 {
+    "terminal.integrated.cwd": "${workspaceFolder}\\ContosoDashboard",
     "chat.promptFilesRecommendations": {
         "speckit.constitution": true,
         "speckit.specify": true,
@@ -11,4 +12,3 @@
         ".specify/scripts/powershell/": true
     }
 }
-

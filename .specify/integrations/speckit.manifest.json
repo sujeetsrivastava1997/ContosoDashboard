@@ -1,0 +1,30 @@
+{
+  "integration": "speckit",
+  "version": "1.4.3",
+  "installed_at": "2026-11-23T12:58:51.320903+00:00",
+  "files": {
+    ".specify/scripts/powershell/check-prerequisites.ps1": "08b1872f165889e89a06e0b43fe0c6ea1aa3540f6c4989a41ab9e731604407a6",
+    ".specify/scripts/powershell/common.ps1": "076472f712a6ab547d1caec1754939f1dee0990926256c32799977d660b30d88",
+    ".specify/scripts/powershell/create-new-feature.ps1": "24cef9b58ebcf8d39c31219861078270a50dc37e1d81c01b9a4bbab6a7e4778e",
+    ".specify/scripts/powershell/setup-plan.ps1": "2b6889f98b6843b768106d80598162abc360964c6405c947656f236d5f410a48",
+    ".specify/templates/checklist-template.md": "78d0ff5f1330578b274ae2b0bd53b7ed86d7c3de66dbbba1184ac0cabcc3dbb4",
+    ".specify/templates/plan-template.md": "5b16cb50ddf42db91333aefb02717e0c2b9a74ae1c1022305030d5c8d6b31ab3",
+    ".specify/templates/spec-template.md": "bdb3cb6d7562f9429c00373d221f3d8a377d2ab4132afdaed36d39d83e6f2f63",
+    ".specify/templates/tasks-template.md": "b01e10f0393b94a880f611bea908d97e3cbbd3ba5cb8bd34470a6ab42bc1f112",
+    ".specify/scripts/powershell/resolve-template.ps1": "e87810c30c8ccc15ef07a14836942a3190060ea1e17234cabfc29a273f2a46dc",
+    ".specify/scripts/powershell/setup-tasks.ps1": "c379dffe64787f6f4efa84d4685a58f4319ff853b6895b0c17041d00221fb4c9",
+    ".specify/scripts/powershell/markdown_sections.py": "189e980b7c86f54c0886be57e3113cf47fc474467a08dff851144b5cc5e1fe39",
+    ".specify/templates/constitution-template.md": "ce7549540fa45543cca797a150201d868e64495fdff39dc38246fb17bd4024b3",
+    ".specify/.gitignore": "0a61c5378b0bb2e0f85babff99c8b166f2170a2c12378cd17d929aa19296ec88"
+  },
+  "recovered_files": [
+    ".specify/scripts/powershell/check-prerequisites.ps1",
+    ".specify/scripts/powershell/common.ps1",
+    ".specify/scripts/powershell/create-new-feature.ps1",
+    ".specify/scripts/powershell/setup-plan.ps1",
+    ".specify/templates/checklist-template.md",
+    ".specify/templates/plan-template.md",
+    ".specify/templates/spec-template.md",
+    ".specify/templates/tasks-template.md"
+  ]
+}
