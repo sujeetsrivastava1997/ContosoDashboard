@@ -5,6 +5,15 @@
 **Status**: Draft
 **Input**: StakeholderDocs/document-upload-and-management-feature.md
 
+## Clarifications
+
+### Session 2026-11-23
+
+- Q: What document-management capabilities should Team Leads have for documents uploaded by their team members? → A: Team Leads can view, edit metadata, replace files, and delete documents uploaded by their team members.
+- Q: Who may share a document with selected users or teams? → A: Only the document owner may share the document.
+- Q: How should access change when a document is shared with a team? → A: Only members who were on the team when it was shared gain access; owners must reshare for later members.
+- Q: Who may revoke a document share, and how quickly must access be removed? → A: The document owner may revoke access for individual users or teams, immediately removing corresponding recipients' access.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Upload and organize documents (Priority: P1)
@@ -53,7 +62,10 @@ A document owner edits metadata or replaces the file, deletes the document after
 1. **Given** a user owns a document, **When** the user edits title, description, category, or tags and saves, **Then** the updated metadata is retained.
 2. **Given** a user owns a document, **When** the user confirms deletion, **Then** the document metadata and file are permanently removed.
 3. **Given** a document owner shares it with a user or team, **When** sharing succeeds, **Then** recipients receive an in-app notification and see the document in Shared with Me.
+   Team shares grant access only to users who are members of the team at the time of sharing; later team members do not gain access until the document is shared again.
 4. **Given** a Project Manager deletes a project document owned by another user, **When** the manager confirms deletion, **Then** the document is permanently removed.
+5. **Given** a Team Lead manages a document uploaded by a team member, **When** the Team Lead views, edits metadata, replaces the file, or confirms deletion, **Then** the permitted management action succeeds.
+6. **Given** a document owner revokes access for an individual user or team, **When** the revocation is confirmed, **Then** the corresponding recipients immediately lose document access through list, search, preview, download, and Shared with Me views.
 
 ---
 
@@ -95,6 +107,8 @@ Administrators review audit records and reports for uploads, downloads, deletion
 - If a database record is deleted or an upload is cancelled, no orphaned file or metadata record remains.
 - If a project association is invalid or the user lacks project membership, the system rejects the upload.
 - If a shared recipient is removed or no longer authorized, the recipient loses access while existing audit data is retained.
+- If a document is shared with a team, access is granted only to team members at the time of sharing; users who join later require a new owner share.
+- If a document owner revokes access for an individual user or team, the corresponding recipients lose access immediately.
 - If a file is replaced, the previous file is removed after the replacement is successfully stored and the metadata update succeeds.
 - If a file name contains traversal sequences or unsupported characters, it must not control any storage location.
 
@@ -119,10 +133,10 @@ Administrators review audit records and reports for uploads, downloads, deletion
 - **FR-015**: System MUST search permitted documents by title, description, tags, uploader name, and associated project.
 - **FR-016**: System MUST exclude unauthorized documents from list, search, preview, and download results.
 - **FR-017**: Authorized users MUST be able to download documents and preview PDF and image documents in the browser.
-- **FR-018**: Document owners MUST be able to edit title, description, category, tags, and replace the document file.
-- **FR-019**: Document owners and applicable Project Managers MUST be able to delete documents, but deletion requires user confirmation.
+- **FR-018**: Document owners MUST be able to edit title, description, category, tags, and replace the document file. Team Leads MUST also be able to perform these actions for documents uploaded by their team members.
+- **FR-019**: Document owners, applicable Project Managers, and Team Leads managing documents uploaded by their team members MUST be able to delete documents, but deletion requires user confirmation.
 - **FR-020**: System MUST permanently remove confirmed deletions rather than retaining a recoverable copy.
-- **FR-021**: Document owners MUST be able to share documents with selected users or teams.
+- **FR-021**: Only document owners MUST be able to share documents with selected users or teams and revoke access for individual users or teams. A team share MUST snapshot the team's membership at sharing time, so only those current members receive access; later members gain access only after the owner shares the document again. Revocation MUST take effect immediately, removing the corresponding recipients' ability to view, search, preview, download, or find the document in Shared with Me.
 - **FR-022**: Recipients MUST receive an in-app notification and see shared documents in a Shared with Me view.
 - **FR-023**: Authorized task users MUST be able to view, attach, and upload documents from task details.
 - **FR-024**: Documents uploaded from a task MUST inherit that task's project association.
@@ -136,7 +150,7 @@ Administrators review audit records and reports for uploads, downloads, deletion
 ### Key Entities *(include if feature involves data)*
 
 - **Document**: Metadata and storage reference for an uploaded file, including integer identity, title, description, category, project, uploader, upload date, file size, MIME type, tags, and storage path.
-- **DocumentShare**: A relationship granting a user or team access to a document, including sharing actor and creation data.
+- **DocumentShare**: A relationship granting a user or team access to a document, including sharing actor, creation data, and, for team shares, the membership snapshot at sharing time.
 - **DocumentActivity**: An audit event identifying document, actor, activity type, and timestamp.
 - **Project**: Existing project that may be associated with documents and contains team membership and a Project Manager.
 - **Task**: Existing task that may be associated with documents and belongs to a project.
