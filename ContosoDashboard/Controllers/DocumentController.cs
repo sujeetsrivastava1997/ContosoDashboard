@@ -13,7 +13,7 @@ public sealed class DocumentController(IDocumentService documentService) : Contr
 {
     /// <summary>Uploads a supported document for the authenticated user.</summary>
     [HttpPost]
-    [RequestSizeLimit(25 * 1024 * 1024)]
+    [RequestSizeLimit(25 * 1024 * 1024 + 64 * 1024)]
     [Consumes("multipart/form-data")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(DocumentUploadResponse), StatusCodes.Status201Created)]
@@ -27,7 +27,7 @@ public sealed class DocumentController(IDocumentService documentService) : Contr
         [FromForm] IFormFile file,
         [FromForm] string title,
         [FromForm] string? description,
-        [FromForm] DocumentCategory category,
+        [FromForm] DocumentCategory? category,
         [FromForm] int? projectId,
         [FromForm] int? taskId,
         CancellationToken cancellationToken)

@@ -5,29 +5,29 @@
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 Verify the existing .NET 10 project configuration and restore dependencies in ContosoDashboard/ContosoDashboard.csproj
-- [ ] T002 Create document feature directories for Models, Services, Pages, Endpoints, and AppData/uploads under ContosoDashboard/
-- [ ] T003 [P] Add an xUnit test project for ContosoDashboard in tests/ContosoDashboard.Tests/ContosoDashboard.Tests.csproj
-- [ ] T004 [P] Add EF Core and ASP.NET test package references to tests/ContosoDashboard.Tests/ContosoDashboard.Tests.csproj
-- [ ] T005 Configure `AppData/uploads` as an ignored runtime data directory in .gitignore and create the directory placeholder under ContosoDashboard/AppData/uploads/
+- [X] T001 Verify the existing .NET 10 project configuration and restore dependencies in ContosoDashboard/ContosoDashboard.csproj
+- [X] T002 Create document feature directories for Models, Services, Pages, Endpoints, and AppData/uploads under ContosoDashboard/
+- [X] T003 [P] Add an xUnit test project for ContosoDashboard in tests/ContosoDashboard.Tests/ContosoDashboard.Tests.csproj
+- [X] T004 [P] Add EF Core and ASP.NET test package references to tests/ContosoDashboard.Tests/ContosoDashboard.Tests.csproj
+- [X] T005 Configure `AppData/uploads` as an ignored runtime data directory in .gitignore and create the directory placeholder under ContosoDashboard/AppData/uploads/
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
 **Purpose**: Core infrastructure that MUST be complete before any user story is implemented.
 
-- [ ] T006 Extend ContosoDashboard/Data/ApplicationDbContext.cs with Document, DocumentTag, DocumentShare, DocumentShareRecipient, and DocumentActivity DbSets
-- [ ] T007 Add EF Core mappings, relationships, delete behavior, and indexes for document entities in ContosoDashboard/Data/ApplicationDbContext.cs
-- [ ] T008 [P] Implement Document, DocumentTag, DocumentShare, DocumentShareRecipient, and DocumentActivity models with constrained fields from data-model.md, including Document.DocumentId/Title/Description/Category/ProjectId/TaskId/UploaderUserId/UploadedUtc/FileSizeBytes/MimeType/StorageKey/OriginalFileName/UpdatedUtc; DocumentTag.DocumentTagId/DocumentId/Tag; DocumentShare.DocumentShareId/DocumentId/SharedByUserId/ShareType/TeamIdentifier/SharedUtc; DocumentShareRecipient.DocumentShareRecipientId/DocumentShareId/RecipientUserId/RevokedUtc/RevokedByUserId; and DocumentActivity.DocumentActivityId/DocumentId/DocumentTitleSnapshot/ActorUserId/ActivityType/ActivityUtc in ContosoDashboard/Models/
-- [ ] T009 [P] Add DocumentCategory and DocumentActivityType enums plus request/filter/result types for document operations in ContosoDashboard/Models/ or ContosoDashboard/Services/
-- [ ] T010 Define IFileStorageService and IMalwareScanService contracts with local implementation-ready methods in ContosoDashboard/Services/IFileStorageService.cs and ContosoDashboard/Services/IMalwareScanService.cs
-- [ ] T011 Implement GUID-based local storage outside web root and compensating file deletion in ContosoDashboard/Services/LocalFileStorageService.cs
+- [X] T006 Extend ContosoDashboard/Data/ApplicationDbContext.cs with Document, DocumentTag, DocumentShare, DocumentShareRecipient, and DocumentActivity DbSets
+- [X] T007 Add EF Core mappings, relationships, delete behavior, and indexes for document entities in ContosoDashboard/Data/ApplicationDbContext.cs
+- [X] T008 [P] Implement Document, DocumentTag, DocumentShare, DocumentShareRecipient, and DocumentActivity models with constrained fields from data-model.md, including Document.DocumentId/Title/Description/Category/ProjectId/TaskId/UploaderUserId/UploadedUtc/FileSizeBytes/MimeType/StorageKey/OriginalFileName/UpdatedUtc; DocumentTag.DocumentTagId/DocumentId/Tag; DocumentShare.DocumentShareId/DocumentId/SharedByUserId/ShareType/TeamIdentifier/SharedUtc; DocumentShareRecipient.DocumentShareRecipientId/DocumentShareId/RecipientUserId/RevokedUtc/RevokedByUserId; and DocumentActivity.DocumentActivityId/DocumentId/DocumentTitleSnapshot/ActorUserId/ActivityType/ActivityUtc in ContosoDashboard/Models/
+- [X] T009 [P] Add DocumentCategory and DocumentActivityType enums plus request/filter/result types for document operations in ContosoDashboard/Models/ or ContosoDashboard/Services/
+- [X] T010 Define IFileStorageService and IMalwareScanService contracts with local implementation-ready methods in ContosoDashboard/Services/IFileStorageService.cs and ContosoDashboard/Services/IMalwareScanService.cs
+- [X] T011 Implement GUID-based local storage outside web root and compensating file deletion in ContosoDashboard/Services/LocalFileStorageService.cs
 - [x] T012 Implement the offline training malware scanner with allowlisted MIME/extension and unsafe signature validation in ContosoDashboard/Services/LocalMalwareScanService.cs
 - [x] T013 [P] Register document dependencies, HttpContextAccessor, storage, scanner, and DocumentService in ContosoDashboard/Program.cs
-- [ ] T014 [P] Add document notification types and document links to the existing notification model and notification service as needed in ContosoDashboard/Models/Notification.cs and ContosoDashboard/Services/NotificationService.cs
+- [X] T014 [P] Add document notification types and document links to the existing notification model and notification service as needed in ContosoDashboard/Models/Notification.cs and ContosoDashboard/Services/NotificationService.cs
 - [x] T015 Define the central IDocumentService contract and authorization/result primitives in ContosoDashboard/Services/DocumentService.cs
-- [ ] T016 Implement shared document authorization for owners, active share recipients, project members/managers, task participants, Team Leads for same-department uploaders, and administrators in ContosoDashboard/Services/DocumentService.cs
-- [ ] T017 [P] Add document routes to ContosoDashboard/Shared/NavMenu.razor and a document feature stylesheet hook in ContosoDashboard/wwwroot/css/site.css
-- [ ] T018 [P] Add an in-memory EF test fixture and identity helpers to tests/ContosoDashboard.Tests/
+- [X] T016 Implement shared document authorization for owners, active share recipients, project members/managers, task participants, Team Leads for same-department uploaders, and administrators in ContosoDashboard/Services/DocumentService.cs
+- [X] T017 [P] Add document routes to ContosoDashboard/Shared/NavMenu.razor and a document feature stylesheet hook in ContosoDashboard/wwwroot/css/site.css
+- [X] T018 [P] Add an in-memory EF test fixture and identity helpers to tests/ContosoDashboard.Tests/
 
 **Checkpoint**: Foundation ready; no user-story work can begin until storage, entities, authorization, and notification infrastructure are complete.
 
@@ -39,19 +39,19 @@
 
 ### Tests for User Story 1
 
-- [ ] T019 [P] [US1] Test upload rejects missing title/category, unsupported type, and files over 25 MB in tests/ContosoDashboard.Tests/DocumentUploadTests.cs
-- [ ] T020 [P] [US1] Test upload compensation removes a newly stored file when metadata persistence fails in tests/ContosoDashboard.Tests/DocumentUploadTests.cs
-- [ ] T021 [P] [US1] Test task uploads inherit the task project and project-invalid uploads are rejected in tests/ContosoDashboard.Tests/DocumentUploadTests.cs
+- [X] T019 [P] [US1] Test upload rejects missing title/category, unsupported type, and files over 25 MB in tests/ContosoDashboard.Tests/DocumentUploadTests.cs
+- [X] T020 [P] [US1] Test upload compensation removes a newly stored file when metadata persistence fails in tests/ContosoDashboard.Tests/DocumentUploadTests.cs
+- [X] T021 [P] [US1] Test task uploads inherit the task project and project-invalid uploads are rejected in tests/ContosoDashboard.Tests/DocumentUploadTests.cs
 
 ### Implementation for User Story 1
 
-- [ ] T022 [P] [US1] Implement upload request validation for Document.Title/Description/Category/ProjectId/TaskId/FileSizeBytes/MimeType/StorageKey/OriginalFileName from data-model.md and allowed 1..26,214,400 byte files in ContosoDashboard/Services/DocumentService.cs
+- [X] T022 [P] [US1] Implement upload request validation for Document.Title/Description/Category/ProjectId/TaskId/FileSizeBytes/MimeType/StorageKey/OriginalFileName from data-model.md and allowed 1..26,214,400 byte files in ContosoDashboard/Services/DocumentService.cs
 - [x] T023 [US1] Implement `UploadAsync` in ContosoDashboard/Services/DocumentService.cs, including GUID storage, malware scan, database persistence, activity creation, and compensation
-- [ ] T024 [P] [US1] Implement My Documents queries with owner and permitted project/share access, category/project/date filtering, and sort options in ContosoDashboard/Services/DocumentService.cs
-- [ ] T025 [P] [US1] Create the multi-file upload and progress UI in ContosoDashboard/Pages/DocumentUpload.razor
-- [ ] T026 [P] [US1] Create the My Documents list UI with title, category, upload date, file size, and project fields in ContosoDashboard/Pages/Documents.razor
-- [ ] T027 [US1] Add validation feedback and actionable security-neutral upload errors to ContosoDashboard/Pages/DocumentUpload.razor
-- [ ] T028 [US1] Record upload DocumentActivity activity and notify project members when a project document is uploaded in ContosoDashboard/Services/DocumentService.cs
+- [X] T024 [P] [US1] Implement My Documents queries with owner and permitted project/share access, category/project/date filtering, and sort options in ContosoDashboard/Services/DocumentService.cs
+- [X] T025 [P] [US1] Create the multi-file upload and progress UI in ContosoDashboard/Pages/DocumentUpload.razor
+- [X] T026 [P] [US1] Create the My Documents list UI with title, category, upload date, file size, and project fields in ContosoDashboard/Pages/Documents.razor
+- [X] T027 [US1] Add validation feedback and actionable security-neutral upload errors to ContosoDashboard/Pages/DocumentUpload.razor
+- [X] T028 [US1] Record upload DocumentActivity activity and notify project members when a project document is uploaded in ContosoDashboard/Services/DocumentService.cs
 
 **Checkpoint**: US1 is complete and independently testable for valid upload, rejected upload, My Documents visibility, and project/task association.
 
@@ -63,18 +63,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T029 [P] [US2] Test list, sort, filter, and search exclude unauthorized documents in tests/ContosoDashboard.Tests/DocumentBrowseTests.cs
-- [ ] T030 [P] [US2] Test preview/download authorization and preview MIME restrictions in tests/ContosoDashboard.Tests/DocumentAccessTests.cs
+- [X] T029 [P] [US2] Test list, sort, filter, and search exclude unauthorized documents in tests/ContosoDashboard.Tests/DocumentBrowseTests.cs
+- [X] T030 [P] [US2] Test preview/download authorization and preview MIME restrictions in tests/ContosoDashboard.Tests/DocumentAccessTests.cs
 
 ### Implementation for User Story 2
 
-- [ ] T031 [P] [US2] Implement permitted list/sort/filter/search operations across Document.Title/Description/DocumentTag.Tag/UploaderUserId and project name in ContosoDashboard/Services/DocumentService.cs
-- [ ] T032 [P] [US2] Add project document loading and project-member authorization to ContosoDashboard/Pages/ProjectDetails.razor and ContosoDashboard/Services/DocumentService.cs
-- [ ] T033 [US2] Implement the authorized preview and download endpoint handlers in ContosoDashboard/Endpoints/DocumentEndpoints.cs for GET `/documents/{documentId}/preview` and `/documents/{documentId}/download`
-- [ ] T034 [US2] Implement safe stream preparation, nosniff headers, attachment filename, and 403/404 responses in ContosoDashboard/Endpoints/DocumentEndpoints.cs
-- [ ] T035 [US2] Map document endpoints after authentication and authorization middleware in ContosoDashboard/Program.cs
-- [ ] T036 [P] [US2] Add authorized preview/download actions and search/filter controls to ContosoDashboard/Pages/Documents.razor
-- [ ] T037 [US2] Record successful preview and download DocumentActivity events in ContosoDashboard/Services/DocumentService.cs
+- [X] T031 [P] [US2] Implement permitted list/sort/filter/search operations across Document.Title/Description/DocumentTag.Tag/UploaderUserId and project name in ContosoDashboard/Services/DocumentService.cs
+- [X] T032 [P] [US2] Add project document loading and project-member authorization to ContosoDashboard/Pages/ProjectDetails.razor and ContosoDashboard/Services/DocumentService.cs
+- [X] T033 [US2] Implement the authorized preview and download endpoint handlers in ContosoDashboard/Endpoints/DocumentEndpoints.cs for GET `/documents/{documentId}/preview` and `/documents/{documentId}/download`
+- [X] T034 [US2] Implement safe stream preparation, nosniff headers, attachment filename, and 403/404 responses in ContosoDashboard/Endpoints/DocumentEndpoints.cs
+- [X] T035 [US2] Map document endpoints after authentication and authorization middleware in ContosoDashboard/Program.cs
+- [X] T036 [P] [US2] Add authorized preview/download actions and search/filter controls to ContosoDashboard/Pages/Documents.razor
+- [X] T037 [US2] Record successful preview and download DocumentActivity events in ContosoDashboard/Services/DocumentService.cs
 
 **Checkpoint**: US2 is complete and independently testable for browse/search/filter/preview/download and unauthorized access denial.
 
@@ -86,17 +86,17 @@
 
 ### Tests for User Story 3
 
-- [ ] T038 [P] [US3] Test owner, Team Lead same-department, and Project Manager deletion permissions in tests/ContosoDashboard.Tests/DocumentManagementTests.cs
-- [ ] T039 [P] [US3] Test replacement compensation and removal of the old file after successful metadata/storage update in tests/ContosoDashboard.Tests/DocumentManagementTests.cs
-- [ ] T040 [P] [US3] Test direct/team shares snapshot recipients and revoke immediately removes access in tests/ContosoDashboard.Tests/DocumentShareTests.cs
+- [X] T038 [P] [US3] Test owner, Team Lead same-department, and Project Manager deletion permissions in tests/ContosoDashboard.Tests/DocumentManagementTests.cs
+- [X] T039 [P] [US3] Test replacement compensation and removal of the old file after successful metadata/storage update in tests/ContosoDashboard.Tests/DocumentManagementTests.cs
+- [X] T040 [P] [US3] Test direct/team shares snapshot recipients and revoke immediately removes access in tests/ContosoDashboard.Tests/DocumentShareTests.cs
 
 ### Implementation for User Story 3
 
-- [ ] T041 [P] [US3] Implement metadata update for Document.Title/Description/Category/DocumentTag.Tag values with server validation in ContosoDashboard/Services/DocumentService.cs
-- [ ] T042 [US3] Implement file replacement for Document.FileSizeBytes/MimeType/StorageKey/OriginalFileName/UpdatedUtc with compensation and old-file cleanup in ContosoDashboard/Services/DocumentService.cs
-- [ ] T043 [US3] Implement confirmed permanent delete for owner, applicable Project Manager, and Team Lead permissions in ContosoDashboard/Services/DocumentService.cs
-- [ ] T044 [P] [US3] Implement direct and department team share snapshot creation using DocumentShare and DocumentShareRecipient in ContosoDashboard/Services/DocumentService.cs
-- [ ] T045 [P] [US3] Implement owner-only individual/team revocation and active-recipient filtering in ContosoDashboard/Services/DocumentService.cs
+- [X] T041 [P] [US3] Implement metadata update for Document.Title/Description/Category/DocumentTag.Tag values with server validation in ContosoDashboard/Services/DocumentService.cs
+- [X] T042 [US3] Implement file replacement for Document.FileSizeBytes/MimeType/StorageKey/OriginalFileName/UpdatedUtc with compensation and old-file cleanup in ContosoDashboard/Services/DocumentService.cs
+- [X] T043 [US3] Implement confirmed permanent delete for owner, applicable Project Manager, and Team Lead permissions in ContosoDashboard/Services/DocumentService.cs
+- [X] T044 [P] [US3] Implement direct and department team share snapshot creation using DocumentShare and DocumentShareRecipient in ContosoDashboard/Services/DocumentService.cs
+- [X] T045 [P] [US3] Implement owner-only individual/team revocation and active-recipient filtering in ContosoDashboard/Services/DocumentService.cs
 - [ ] T046 [P] [US3] Add in-app share/revoke and project notifications through ContosoDashboard/Services/NotificationService.cs
 - [ ] T047 [P] [US3] Create the document management and Shared with Me UI in ContosoDashboard/Pages/SharedDocuments.razor
 - [ ] T048 [US3] Add edit, replace, delete confirmation, share, and revoke controls to ContosoDashboard/Pages/Documents.razor

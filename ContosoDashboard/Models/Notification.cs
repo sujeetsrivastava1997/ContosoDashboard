@@ -29,6 +29,8 @@ public class Notification
 
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
+    public int? DocumentId { get; set; }
+
     // Navigation properties
     [ForeignKey("UserId")]
     public virtual User User { get; set; } = null!;
@@ -42,7 +44,10 @@ public enum NotificationType
     TaskCompleted,
     TaskComment,
     ProjectUpdate,
-    SystemAnnouncement
+    SystemAnnouncement,
+    DocumentUploaded,
+    DocumentShared,
+    DocumentShareRevoked
 }
 
 public enum NotificationPriority

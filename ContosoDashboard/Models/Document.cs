@@ -64,4 +64,7 @@ public sealed class Document
     public User UploaderUser { get; set; } = null!;
     public Project? Project { get; set; }
     public TaskItem? TaskItem { get; set; }
+    public ICollection<DocumentTag> Tags { get; set; } = new List<DocumentTag>();
+    public ICollection<DocumentShare> Shares { get; set; } = new List<DocumentShare>();
+    public ICollection<DocumentActivity> Activities { get; set; } = new List<DocumentActivity>();
 }

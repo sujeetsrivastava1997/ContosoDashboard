@@ -5,6 +5,7 @@
 @using System.Security.Claims
 @attribute [Authorize]
 @inject IProjectService ProjectService
+@inject IDocumentService DocumentService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
@@ -192,6 +193,7 @@
                                             </div>
                                         </div>
                                     </div>
+
                                 }
                             </div>
                         }
@@ -229,6 +231,31 @@
                 </div>
             </div>
         </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Project Documents</h5>
+                <a class="btn btn-sm btn-outline-primary" href="/documents/upload">Upload document</a>
+            </div>
+            <div class="card-body">
+                @if (projectDocuments.Count == 0)
+                {
+                    <p class="text-muted mb-0">No accessible documents are associated with this project.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var document in projectDocuments)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span><strong>@document.Title</strong> <span class="text-muted">· @document.Category</span></span>
+                                <a class="btn btn-sm btn-outline-primary" href="@($"/documents/{document.DocumentId}/download")">Download</a>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
     }
 </div>
 
@@ -237,6 +264,7 @@
     public int ProjectId { get; set; }
 
     private Project? project;
+    private List<Document> projectDocuments = [];
     private int currentUserId = 0;
 
     protected override async Task OnInitializedAsync()
@@ -253,6 +281,11 @@
         if (currentUserId > 0)
         {
             project = await ProjectService.GetProjectByIdAsync(ProjectId, currentUserId);
+            if (project is not null)
+            {
+                projectDocuments = (await DocumentService.GetAccessibleAsync(currentUserId,
+                    new DocumentFilter { ProjectId = ProjectId }, CancellationToken.None)).ToList();
+            }
         }
         
         if (project == null)

@@ -42,6 +42,10 @@
                                         <span class="badge bg-secondary ms-2">@notification.Type</span>
                                     </div>
                                     <p class="mb-1">@notification.Message</p>
+                                    @if (notification.DocumentId.HasValue)
+                                    {
+                                        <a class="small" href="@($"/documents/{notification.DocumentId.Value}/download")">Open document</a>
+                                    }
                                     <small class="text-muted">@GetRelativeTime(notification.CreatedDate)</small>
                                 </div>
                                 @if (!notification.IsRead)

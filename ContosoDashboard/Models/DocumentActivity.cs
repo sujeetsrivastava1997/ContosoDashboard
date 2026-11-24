@@ -20,4 +20,6 @@ public sealed class DocumentActivity
     public DocumentActivityType ActivityType { get; set; }
 
     public DateTime ActivityUtc { get; set; } = DateTime.UtcNow;
+
+    public Document? Document { get; set; }
 }

@@ -18,6 +18,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<ProjectMember> ProjectMembers { get; set; } = null!;
     public DbSet<Announcement> Announcements { get; set; } = null!;
     public DbSet<Document> Documents { get; set; } = null!;
+    public DbSet<DocumentTag> DocumentTags { get; set; } = null!;
+    public DbSet<DocumentShare> DocumentShares { get; set; } = null!;
+    public DbSet<DocumentShareRecipient> DocumentShareRecipients { get; set; } = null!;
     public DbSet<DocumentActivity> DocumentActivities { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -61,10 +64,69 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Notification>()
             .HasIndex(n => new { n.UserId, n.IsRead });
+        modelBuilder.Entity<Notification>()
+            .HasOne<Document>()
+            .WithMany()
+            .HasForeignKey(notification => notification.DocumentId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
             .IsUnique();
+
+        modelBuilder.Entity<Document>(entity =>
+        {
+            entity.Property(document => document.Category).HasConversion<string>().HasMaxLength(50);
+            entity.HasIndex(document => document.StorageKey).IsUnique();
+            entity.HasIndex(document => document.UploaderUserId);
+            entity.HasIndex(document => new { document.ProjectId, document.UploadedUtc });
+            entity.HasIndex(document => new { document.Category, document.UploadedUtc });
+            entity.HasOne(document => document.UploaderUser).WithMany()
+                .HasForeignKey(document => document.UploaderUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(document => document.Project).WithMany()
+                .HasForeignKey(document => document.ProjectId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(document => document.TaskItem).WithMany()
+                .HasForeignKey(document => document.TaskId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DocumentTag>(entity =>
+        {
+            entity.HasIndex(tag => new { tag.DocumentId, tag.Tag }).IsUnique();
+            entity.HasOne(tag => tag.Document).WithMany(document => document.Tags)
+                .HasForeignKey(tag => tag.DocumentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DocumentShare>(entity =>
+        {
+            entity.Property(share => share.ShareType).HasConversion<string>().HasMaxLength(20);
+            entity.HasIndex(share => new { share.DocumentId, share.ShareType, share.TeamIdentifier });
+            entity.HasOne(share => share.Document).WithMany(document => document.Shares)
+                .HasForeignKey(share => share.DocumentId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(share => share.SharedByUser).WithMany()
+                .HasForeignKey(share => share.SharedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DocumentShareRecipient>(entity =>
+        {
+            entity.HasIndex(recipient => new { recipient.RecipientUserId, recipient.RevokedUtc });
+            entity.HasIndex(recipient => new { recipient.DocumentShareId, recipient.RecipientUserId }).IsUnique();
+            entity.HasOne(recipient => recipient.Share).WithMany(share => share.Recipients)
+                .HasForeignKey(recipient => recipient.DocumentShareId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(recipient => recipient.RecipientUser).WithMany()
+                .HasForeignKey(recipient => recipient.RecipientUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(recipient => recipient.RevokedByUser).WithMany()
+                .HasForeignKey(recipient => recipient.RevokedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DocumentActivity>(entity =>
+        {
+            entity.Property(activity => activity.ActivityType).HasConversion<string>().HasMaxLength(30);
+            entity.HasIndex(activity => activity.ActivityUtc);
+            entity.HasIndex(activity => new { activity.DocumentId, activity.ActivityUtc });
+            entity.HasIndex(activity => new { activity.ActorUserId, activity.ActivityUtc });
+            entity.HasOne(activity => activity.Document).WithMany(document => document.Activities)
+                .HasForeignKey(activity => activity.DocumentId).OnDelete(DeleteBehavior.SetNull);
+        });
 
         // Seed initial data
         SeedData(modelBuilder);

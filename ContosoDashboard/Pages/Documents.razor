@@ -1,0 +1,150 @@
+@page "/documents"
+@using System.Security.Claims
+@attribute [Authorize]
+@inject IDocumentService DocumentService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>My Documents - ContosoDashboard</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>My Documents</h1>
+        <a class="btn btn-primary" href="/documents/upload">Upload documents</a>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label" for="document-search">Search permitted documents</label>
+                    <input id="document-search" class="form-control" @bind="search" @bind:event="oninput" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="document-category">Category</label>
+                    <select id="document-category" class="form-select" @bind="category">
+                        <option value="">All categories</option>
+                        @foreach (var value in Enum.GetValues<DocumentCategory>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="document-sort">Sort by</label>
+                    <select id="document-sort" class="form-select" @bind="sortBy">
+                        @foreach (var value in Enum.GetValues<DocumentSortField>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="document-project">Project ID</label>
+                    <input id="document-project" type="number" class="form-control" @bind="projectId" min="1" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="document-from">From</label>
+                    <input id="document-from" type="date" class="form-control" @bind="uploadedFrom" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="document-through">Through</label>
+                    <input id="document-through" type="date" class="form-control" @bind="uploadedThrough" />
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-primary w-100" @onclick="LoadDocumentsAsync">Apply filters</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (documents is null)
+    {
+        <p><em>Loading documents…</em></p>
+    }
+    else if (documents.Count == 0)
+    {
+        <div class="alert alert-info">No documents match your filters.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle document-table">
+                <thead>
+                    <tr><th>Title</th><th>Category</th><th>Uploaded</th><th>Size</th><th>Project</th><th>Uploader</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var document in documents)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@document.Title</strong>
+                                @if (document.Tags.Count > 0)
+                                {
+                                    <div class="small text-muted">@string.Join(", ", document.Tags.Select(tag => tag.Tag))</div>
+                                }
+                            </td>
+                            <td>@document.Category</td>
+                            <td>@document.UploadedUtc.ToLocalTime().ToString("g")</td>
+                            <td>@FormatSize(document.FileSizeBytes)</td>
+                            <td>@(document.Project?.Name ?? "—")</td>
+                            <td>@document.UploaderUser.DisplayName</td>
+                            <td class="text-nowrap">
+                                @if (document.MimeType is "application/pdf" or "image/jpeg" or "image/png")
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary" href="@PreviewUrl(document.DocumentId)" target="_blank" rel="noopener">Preview</a>
+                                }
+                                <a class="btn btn-sm btn-outline-primary" href="@DownloadUrl(document.DocumentId)">Download</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Document>? documents;
+    private int currentUserId;
+    private string? search;
+    private DocumentCategory? category;
+    private DocumentSortField sortBy = DocumentSortField.UploadedUtc;
+    private int? projectId;
+    private DateTime? uploadedFrom;
+    private DateTime? uploadedThrough;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        int.TryParse(state.User.FindFirstValue(ClaimTypes.NameIdentifier), out currentUserId);
+        await LoadDocumentsAsync();
+    }
+
+    private async Task LoadDocumentsAsync()
+    {
+        if (currentUserId <= 0)
+        {
+            documents = [];
+            return;
+        }
+
+        var result = await DocumentService.GetAccessibleAsync(currentUserId, new DocumentFilter
+        {
+            Search = search,
+            Category = category,
+            ProjectId = projectId,
+            UploadedFromUtc = uploadedFrom,
+            UploadedThroughUtc = uploadedThrough,
+            SortBy = sortBy,
+            Descending = true
+        }, CancellationToken.None);
+        documents = result.ToList();
+    }
+
+    private static string FormatSize(long bytes) => bytes < 1024 * 1024
+        ? $"{bytes / 1024d:0.#} KB"
+        : $"{bytes / (1024d * 1024d):0.#} MB";
+
+    private static string PreviewUrl(int id) => $"/documents/{id}/preview";
+    private static string DownloadUrl(int id) => $"/documents/{id}/download";
+}

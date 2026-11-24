@@ -10,6 +10,7 @@ public interface INotificationService
     Task<Notification> CreateNotificationAsync(Notification notification);
     Task<bool> MarkAsReadAsync(int notificationId, int requestingUserId);
     Task<int> GetUnreadCountAsync(int userId);
+    Task<Notification> CreateDocumentNotificationAsync(int userId, int documentId, string title, string message, NotificationType type);
 }
 
 public class NotificationService : INotificationService
@@ -69,4 +70,20 @@ public class NotificationService : INotificationService
         return await _context.Notifications
             .CountAsync(n => n.UserId == userId && !n.IsRead);
     }
+
+    public Task<Notification> CreateDocumentNotificationAsync(
+        int userId,
+        int documentId,
+        string title,
+        string message,
+        NotificationType type) =>
+        CreateNotificationAsync(new Notification
+        {
+            UserId = userId,
+            DocumentId = documentId,
+            Title = title,
+            Message = message,
+            Type = type,
+            Priority = NotificationPriority.Informational
+        });
 }

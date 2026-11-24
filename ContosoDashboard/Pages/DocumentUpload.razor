@@ -1,0 +1,152 @@
+@page "/documents/upload"
+@using System.Security.Claims
+@attribute [Authorize]
+@inject IDocumentService DocumentService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Upload documents - ContosoDashboard</PageTitle>
+
+<div class="container-fluid">
+    <h1>Upload documents</h1>
+    <p class="text-muted">PDF, Office, text, JPEG, and PNG files up to 25 MB each are accepted.</p>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label" for="upload-files">Select one or more files</label>
+                <InputFile id="upload-files" OnChange="FilesSelected" multiple />
+                <div class="form-text">The original file name is retained for display only.</div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="upload-title">Document title</label>
+                    <input id="upload-title" class="form-control" @bind="title" maxlength="255" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="upload-category">Category</label>
+                    <select id="upload-category" class="form-select" @bind="category">
+                        <option value="">Select a category</option>
+                        @foreach (var value in Enum.GetValues<DocumentCategory>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="upload-description">Description (optional)</label>
+                    <textarea id="upload-description" class="form-control" @bind="description" maxlength="2000"></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="upload-project">Project ID (optional)</label>
+                    <input id="upload-project" type="number" class="form-control" @bind="projectId" min="1" />
+                </div>
+            </div>
+            <div class="mt-4">
+                <button class="btn btn-primary" disabled="@(!selectedFiles.Any() || uploading)" @onclick="UploadFilesAsync">
+                    @(uploading ? "Uploading…" : "Upload selected files")
+                </button>
+                <span class="ms-2 document-upload-progress" role="status">@progress</span>
+            </div>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3" role="alert">@errorMessage</div>
+            }
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3" role="status">@successMessage</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly List<IBrowserFile> selectedFiles = [];
+    private int currentUserId;
+    private string title = string.Empty;
+    private string? description;
+    private DocumentCategory? category;
+    private int? projectId;
+    private bool uploading;
+    private string? progress;
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        int.TryParse(state.User.FindFirstValue(ClaimTypes.NameIdentifier), out currentUserId);
+    }
+
+    private void FilesSelected(InputFileChangeEventArgs args)
+    {
+        selectedFiles.Clear();
+        selectedFiles.AddRange(args.GetMultipleFiles(100));
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    private async Task UploadFilesAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        if (currentUserId <= 0 || selectedFiles.Count == 0)
+        {
+            errorMessage = "Sign in and select at least one file before uploading.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(title) || category is null)
+        {
+            errorMessage = "Enter a title and select a category before uploading.";
+            return;
+        }
+
+        uploading = true;
+        var completed = 0;
+        var failures = new List<string>();
+        try
+        {
+            foreach (var file in selectedFiles)
+            {
+                progress = $"Uploading {completed + 1} of {selectedFiles.Count}: {file.Name}";
+                await InvokeAsync(StateHasChanged);
+                await using var browserStream = file.OpenReadStream(25L * 1024 * 1024);
+                await using var stream = new MemoryStream((int)Math.Min(file.Size, int.MaxValue));
+                await browserStream.CopyToAsync(stream);
+                stream.Position = 0;
+                var result = await DocumentService.UploadAsync(currentUserId, new DocumentUploadRequest
+                {
+                    Title = selectedFiles.Count == 1 ? title : $"{title} — {Path.GetFileNameWithoutExtension(file.Name)}",
+                    Description = description,
+                    Category = category,
+                    ProjectId = projectId,
+                    OriginalFileName = file.Name,
+                    MimeType = file.ContentType,
+                    FileSizeBytes = file.Size,
+                    FileStream = stream
+                }, CancellationToken.None);
+                if (result.Succeeded)
+                    completed++;
+                else
+                    failures.Add($"{file.Name}: {result.ErrorMessage}");
+            }
+
+            if (completed > 0)
+                successMessage = $"{completed} file(s) uploaded successfully.";
+            if (failures.Count > 0)
+                errorMessage = string.Join(" ", failures);
+            progress = $"Finished: {completed} of {selectedFiles.Count} uploaded.";
+        }
+        catch (IOException)
+        {
+            errorMessage = "A selected file exceeds the 25 MB limit or could not be read.";
+        }
+        catch
+        {
+            errorMessage = "The upload could not be completed. Check the file and try again.";
+        }
+        finally
+        {
+            uploading = false;
+        }
+    }
+}
