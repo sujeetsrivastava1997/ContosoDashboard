@@ -2,6 +2,27 @@
 
 The feature uses Blazor Server for UI and metadata operations. It adds two authorized HTTP GET endpoints for file bytes. Both require authentication and re-check service authorization for direct-object access.
 
+## POST `/api/documents`
+
+**Purpose**: Upload a supported document with metadata.
+
+**Multipart fields**
+- `file`: non-empty file, maximum 25 MB
+- `title`: required, maximum 255 characters
+- `description`: optional, maximum 2000 characters
+- `category`: required predefined document category
+- `projectId`: optional existing project ID
+- `taskId`: optional accessible task ID
+
+**Response**
+- `201 Created`: document metadata and the resource Location header
+- `400 Bad Request`: missing or invalid metadata/file
+- `401 Unauthorized`: no valid authenticated user
+- `403 Forbidden`: the project or uploader context is unauthorized
+- `413 Payload Too Large`: file exceeds 25 MB
+- `415 Unsupported Media Type`: MIME/extension pair is not allowlisted
+- `500 Internal Server Error`: storage or database persistence failure
+
 ## GET `/documents/{documentId}/preview`
 
 **Purpose**: Inline preview for PDF and image documents only.

@@ -1,0 +1,28 @@
+@baseUrl = https://localhost:5000
+
+### Upload a document (requires authentication cookie)
+POST {{baseUrl}}/api/documents
+Content-Type: multipart/form-data; boundary=upload-boundary
+
+--upload-boundary
+Content-Disposition: form-data; name="title"
+
+Quarterly Report
+--upload-boundary
+Content-Disposition: form-data; name="description"
+
+Management reporting document
+--upload-boundary
+Content-Disposition: form-data; name="category"
+
+General
+--upload-boundary
+Content-Disposition: form-data; name="projectId"
+
+1
+--upload-boundary
+Content-Disposition: form-data; name="file"; filename="report.txt"
+Content-Type: text/plain
+
+Contoso training document.
+--upload-boundary--
